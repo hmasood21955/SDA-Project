@@ -1,7 +1,6 @@
 package MASOOD;
 
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -78,27 +77,10 @@ public class AttendanceView {
         JButton recordButton = new JButton("Record Attendance");
         JButton viewHistoryButton = new JButton("View History");
         
-        recordButton.addActionListener(e -> {
-            String studentId = studentIdField.getText().trim();
-            String courseId = courseIdField.getText().trim();
-            
-            if (studentId.isEmpty() || courseId.isEmpty()) {
-                showError("Please enter both Student ID and Course ID");
-                return;
-            }
-            
-            // Ask user if student is late
-            int choice = JOptionPane.showConfirmDialog(
-                frame,
-                "Is the student late?",
-                "Attendance Status",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-            );
-            
-            boolean isLate = (choice == JOptionPane.YES_OPTION);
-            controller.recordAttendance(studentId, courseId, isLate);
-        });
+        recordButton.addActionListener(e -> controller.recordAttendance(
+            studentIdField.getText().trim(),
+            courseIdField.getText().trim()
+        ));
         
         viewHistoryButton.addActionListener(e -> controller.showAttendanceHistory());
         
@@ -132,6 +114,16 @@ public class AttendanceView {
         courseIdField.setText("");
     }
 
+    public int showPunctualityDialog() {
+        return JOptionPane.showConfirmDialog(
+            frame,
+            "Is the student late?",
+            "Attendance Status",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+    }
+
     public void showHistoryDialog(List<AttendanceRecord> records) {
         JDialog historyDialog = new JDialog(frame, "Attendance History - Pakistan Time", true);
         historyDialog.setSize(600, 400);
@@ -141,13 +133,12 @@ public class AttendanceView {
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
         
         for (AttendanceRecord record : records) {
-            String status = record.isLate() ? "Late" : "On Time";
             Object[] row = {
                 record.getId(),
                 record.getStudentId(),
                 record.getCourseId(),
-                record.getTimestamp().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                status
+                record.getTimestamp().format(AttendanceService.TIMESTAMP_FORMAT),
+                record.isLate() ? "Late" : "On Time"
             };
             model.addRow(row);
         }
