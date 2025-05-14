@@ -1,19 +1,17 @@
 package MASOOD;
 
-import javax.swing.*;
 import java.awt.*;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-import java.util.List;
 
 public class AttendanceView {
     private AttendanceController controller;
     private JFrame frame;
     private JTextField studentIdField;
     private JTextField courseIdField;
-    private JTextField timeCheckField;
     private JTextArea statusArea;
 
     public AttendanceView() {
@@ -25,7 +23,7 @@ public class AttendanceView {
     }
 
     private void initializeUI() {
-        frame = new JFrame("Attendance System");
+        frame = new JFrame("Attendance System - Pakistan Time");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(600, 500);
         
@@ -71,15 +69,6 @@ public class AttendanceView {
         gbc.gridx = 1;
         courseIdField = new JTextField(20);
         inputPanel.add(courseIdField, gbc);
-
-        // Time Check
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        inputPanel.add(new JLabel("Check Time (HH:mm):"), gbc);
-        gbc.gridx = 1;
-        timeCheckField = new JTextField(20);
-        timeCheckField.setText("09:00");
-        inputPanel.add(timeCheckField, gbc);
         
         return inputPanel;
     }
@@ -88,43 +77,33 @@ public class AttendanceView {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         JButton recordButton = new JButton("Record Attendance");
         JButton viewHistoryButton = new JButton("View History");
-        JButton checkTimeButton = new JButton("Check Time Status");
         
-        recordButton.addActionListener(e -> controller.recordAttendance(
-            studentIdField.getText().trim(),
-            courseIdField.getText().trim()
-        ));
+        recordButton.addActionListener(e -> {
+            String studentId = studentIdField.getText().trim();
+            String courseId = courseIdField.getText().trim();
+            
+            if (studentId.isEmpty() || courseId.isEmpty()) {
+                showError("Please enter both Student ID and Course ID");
+                return;
+            }
+            
+            // Ask user if student is late
+            int choice = JOptionPane.showConfirmDialog(
+                frame,
+                "Is the student late?",
+                "Attendance Status",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            boolean isLate = (choice == JOptionPane.YES_OPTION);
+            controller.recordAttendance(studentId, courseId, isLate);
+        });
         
         viewHistoryButton.addActionListener(e -> controller.showAttendanceHistory());
         
-        checkTimeButton.addActionListener(e -> {
-            try {
-                String timeStr = timeCheckField.getText().trim();
-                String[] parts = timeStr.split(":");
-                if (parts.length != 2) {
-                    showError("Please enter time in HH:mm format");
-                    return;
-                }
-                
-                int hour = Integer.parseInt(parts[0]);
-                int minute = Integer.parseInt(parts[1]);
-                
-                if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-                    showError("Invalid time format. Use HH:mm (24-hour format)");
-                    return;
-                }
-                
-                LocalDateTime now = LocalDateTime.now();
-                LocalDateTime timeToCheck = now.withHour(hour).withMinute(minute).withSecond(0);
-                controller.checkTimeStatus(timeToCheck);
-            } catch (NumberFormatException ex) {
-                showError("Please enter valid numbers for hours and minutes");
-            }
-        });
-        
         buttonPanel.add(recordButton);
         buttonPanel.add(viewHistoryButton);
-        buttonPanel.add(checkTimeButton);
         return buttonPanel;
     }
 
@@ -154,20 +133,21 @@ public class AttendanceView {
     }
 
     public void showHistoryDialog(List<AttendanceRecord> records) {
-        JDialog historyDialog = new JDialog(frame, "Attendance History", true);
+        JDialog historyDialog = new JDialog(frame, "Attendance History - Pakistan Time", true);
         historyDialog.setSize(600, 400);
         historyDialog.setLocationRelativeTo(frame);
 
-        String[] columnNames = {"ID", "Student ID", "Course ID", "Timestamp", "Status"};
+        String[] columnNames = {"ID", "Student ID", "Course ID", "Time (PKT)", "Status"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
         
         for (AttendanceRecord record : records) {
+            String status = record.isLate() ? "Late" : "On Time";
             Object[] row = {
                 record.getId(),
                 record.getStudentId(),
                 record.getCourseId(),
                 record.getTimestamp().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                record.isLate() ? "Late" : "On Time"
+                status
             };
             model.addRow(row);
         }

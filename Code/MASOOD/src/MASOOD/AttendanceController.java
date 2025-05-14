@@ -1,6 +1,5 @@
 package MASOOD;
 
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,41 +12,27 @@ public class AttendanceController {
         this.service = service;
     }
 
-    public void recordAttendance(String studentId, String courseId) {
+    public void recordAttendance(String studentId, String courseId, boolean isLate) {
         if (studentId.isEmpty() || courseId.isEmpty()) {
             view.showError("Please enter both Student ID and Course ID");
             return;
         }
 
-        try {
-            LocalDateTime now = LocalDateTime.now();
-            service.recordAttendance(studentId, courseId, now);
-            
-            view.updateStatus("Attendance recorded successfully!\n" +
-                           "Student ID: " + studentId + "\n" +
-                           "Course ID: " + courseId + "\n" +
-                           "Time: " + now.format(AttendanceService.TIMESTAMP_FORMAT) + "\n" +
-                           "Status: " + (service.isLateEntry(now) ? "Late" : "On Time"));
-            
-            view.clearInputFields();
-        } catch (SQLException ex) {
-            view.showError("Error recording attendance: " + ex.getMessage());
-        }
-    }
-
-    public void checkTimeStatus(LocalDateTime timeToCheck) {
-        String status = service.checkTimeStatus(timeToCheck);
-        view.updateStatus("Time Status Check:\n" +
-                        "Time: " + timeToCheck.format(AttendanceService.TIMESTAMP_FORMAT) + "\n" +
-                        "Status: " + status);
+        // Get current Pakistan time
+        LocalDateTime now = AttendanceService.getCurrentPakistanTime();
+        service.recordAttendance(studentId, courseId, now, isLate);
+        
+        view.updateStatus("Attendance recorded successfully!\n" +
+                       "Student ID: " + studentId + "\n" +
+                       "Course ID: " + courseId + "\n" +
+                       "Time (PKT): " + now.format(AttendanceService.TIMESTAMP_FORMAT) + "\n" +
+                       "Status: " + (isLate ? "Late" : "On Time"));
+        
+        view.clearInputFields();
     }
 
     public void showAttendanceHistory() {
-        try {
-            List<AttendanceRecord> records = service.getAttendanceHistory();
-            view.showHistoryDialog(records);
-        } catch (SQLException ex) {
-            view.showError("Error loading attendance history: " + ex.getMessage());
-        }
+        List<AttendanceRecord> records = service.getAttendanceHistory();
+        view.showHistoryDialog(records);
     }
 } 

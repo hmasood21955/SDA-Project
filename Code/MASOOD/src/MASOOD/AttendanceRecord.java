@@ -36,4 +36,10 @@ public class AttendanceRecord {
     public boolean isLate() {
         return isLate;
     }
+
+    @Override
+    public String toString() {
+        return String.format("ID: %d, Student: %s, Course: %s, Time: %s, Late: %s",
+            id, studentId, courseId, timestamp, isLate);
+    }
 } 
