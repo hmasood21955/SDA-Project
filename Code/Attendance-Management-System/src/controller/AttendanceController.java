@@ -4,6 +4,8 @@ import model.*;
 import view.AttendanceView;
 import java.awt.event.*;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import javax.swing.*;
@@ -19,9 +21,11 @@ public class AttendanceController {
         // Students
         view.addStudentButton.addActionListener(e -> addStudent());
         view.deleteStudentButton.addActionListener(e -> deleteStudent());
+        view.editStudentButton.addActionListener(e -> editStudent());
         // Courses
         view.addCourseButton.addActionListener(e -> addCourse());
         view.deleteCourseButton.addActionListener(e -> deleteCourse());
+        view.editCourseButton.addActionListener(e -> editCourse());
         // Assignments
         view.assignButton.addActionListener(e -> assignStudentToCourse());
         // Mark Attendance
@@ -30,16 +34,6 @@ public class AttendanceController {
         view.viewAttendanceButton.addActionListener(e -> viewAttendance());
         // Late Students
         view.viewLateStudentsButton.addActionListener(e -> showLateStudents());
-        // ComboBox listeners for dynamic updates
-        view.markCourseComboBox.addActionListener(e -> updateMarkStudentCombo());
-        view.viewCourseComboBox.addActionListener(e -> updateViewAttendanceArea());
-        // Initial population
-        refreshAllData();
-        // Edit buttons
-        view.deleteStudentComboBox.addActionListener(e -> populateEditStudentFields());
-        view.editStudentButton.addActionListener(e -> editStudent());
-        view.deleteCourseComboBox.addActionListener(e -> populateEditCourseFields());
-        view.editCourseButton.addActionListener(e -> editCourse());
         // Export buttons
         view.exportStudentsButton.addActionListener(e -> exportStudentsToCSV());
         view.exportCoursesButton.addActionListener(e -> exportCoursesToCSV());
@@ -49,6 +43,18 @@ public class AttendanceController {
         view.searchCourseButton.addActionListener(e -> searchCourses());
         view.filterAttendanceButton.addActionListener(e -> filterAttendanceByDate());
         view.themeToggleButton.addActionListener(e -> toggleTheme());
+        view.logoutButton.addActionListener(e -> logout());
+        view.showUsersButton.addActionListener(e -> showAvailableUsers());
+        // Edit buttons
+        view.deleteStudentComboBox.addActionListener(e -> populateEditStudentFields());
+        view.editStudentButton.addActionListener(e -> editStudent());
+        view.deleteCourseComboBox.addActionListener(e -> populateEditCourseFields());
+        view.editCourseButton.addActionListener(e -> editCourse());
+        // New buttons
+        view.setThresholdButton.addActionListener(e -> setCustomLateThreshold());
+        view.markExcusedButton.addActionListener(e -> markExcusedAbsence());
+        // Initial population
+        refreshAllData();
     }
 
     private void refreshAllData() {
@@ -60,6 +66,7 @@ public class AttendanceController {
         updateMarkStudentCombo();
         updateViewAttendanceArea();
         updateDeleteCombos();
+        updateRulesCombos();
     }
 
     private void updateStudentList() {
@@ -98,10 +105,23 @@ public class AttendanceController {
 
     private void updateAllCourseCombos() {
         JComboBox[] courseCombos = {view.assignCourseComboBox, view.markCourseComboBox, view.viewCourseComboBox};
+        User currentUser = model.getCurrentUser();
+        
         for (JComboBox combo : courseCombos) {
             combo.removeAllItems();
-            for (String id : model.getCourses().keySet()) {
-                combo.addItem(id);
+            
+            if (currentUser != null && currentUser.isStudent()) {
+                // For students, show only courses they are enrolled in
+                String studentId = currentUser.getStudentId();
+                Set<String> enrolledCourses = model.getCoursesForStudent(studentId);
+                for (String courseId : enrolledCourses) {
+                    combo.addItem(courseId);
+                }
+            } else {
+                // For admin/teacher, show all courses
+                for (String id : model.getCourses().keySet()) {
+                    combo.addItem(id);
+                }
             }
         }
     }
@@ -140,8 +160,25 @@ public class AttendanceController {
         if (records == null || records.isEmpty()) {
             sb.append("No attendance records found for this course.");
         } else {
-            for (AttendanceRecord record : records) {
-                sb.append(String.format("%s - %s - %s\n", record.getStudent().getName(), record.getDateTime().format(DATE_TIME_FORMATTER), record.isLate() ? "LATE" : "PRESENT"));
+            // If current user is a student, show only their records
+            User currentUser = model.getCurrentUser();
+            if (currentUser != null && currentUser.isStudent()) {
+                String studentId = currentUser.getStudentId();
+                boolean foundStudentRecords = false;
+                for (AttendanceRecord record : records) {
+                    if (record.getStudent().getId().equals(studentId)) {
+                        sb.append(String.format("%s - %s - %s\n", record.getStudent().getName(), record.getDateTime().format(DATE_TIME_FORMATTER), record.isLate() ? "LATE" : "PRESENT"));
+                        foundStudentRecords = true;
+                    }
+                }
+                if (!foundStudentRecords) {
+                    sb.append("No attendance records found for you in this course.");
+                }
+            } else {
+                // Show all records for admin/teacher
+                for (AttendanceRecord record : records) {
+                    sb.append(String.format("%s - %s - %s\n", record.getStudent().getName(), record.getDateTime().format(DATE_TIME_FORMATTER), record.isLate() ? "LATE" : "PRESENT"));
+                }
             }
         }
         view.viewAttendanceArea.setText(sb.toString());
@@ -159,6 +196,7 @@ public class AttendanceController {
     }
 
     private void addStudent() {
+        if (!checkAdminPermission()) return;
         String id = view.studentIdField.getText().trim();
         String name = view.studentNameField.getText().trim();
         String email = view.studentEmailField.getText().trim();
@@ -180,6 +218,7 @@ public class AttendanceController {
     }
 
     private void addCourse() {
+        if (!checkAdminPermission()) return;
         String id = view.courseIdField.getText().trim();
         String name = view.courseNameField.getText().trim();
         String code = view.courseCodeField.getText().trim();
@@ -201,6 +240,7 @@ public class AttendanceController {
     }
 
     private void assignStudentToCourse() {
+        if (!checkTeacherPermission()) return;
         String courseId = (String) view.assignCourseComboBox.getSelectedItem();
         String studentId = (String) view.assignStudentComboBox.getSelectedItem();
         if (courseId == null || studentId == null) {
@@ -217,6 +257,7 @@ public class AttendanceController {
     }
 
     private void markAttendance() {
+        if (!checkTeacherPermission()) return;
         String courseId = (String) view.markCourseComboBox.getSelectedItem();
         String studentId = (String) view.markStudentComboBox.getSelectedItem();
         String dateStr = view.markAttendanceDateField.getText().trim();
@@ -238,7 +279,8 @@ public class AttendanceController {
         }
         java.time.LocalTime time = now.toLocalTime();
         java.time.LocalDateTime attendanceDateTime = java.time.LocalDateTime.of(date, time);
-        boolean isLateDefault = attendanceDateTime.toLocalTime().isAfter(model.LATE_THRESHOLD);
+        // Use course-specific late threshold
+        boolean isLateDefault = attendanceDateTime.toLocalTime().isAfter(model.getLateThresholdForCourse(courseId));
         Student student = model.getStudents().get(studentId);
         Course course = model.getCourses().get(courseId);
         String status = isLateDefault ? "LATE" : "ON TIME";
@@ -252,7 +294,7 @@ public class AttendanceController {
                 student.getName(), isLate ? "LATE" : "ON TIME"),
             "Confirm Attendance", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) return;
-        AttendanceRecord record = new AttendanceRecord(student, course, attendanceDateTime, isLate);
+        AttendanceRecord record = new AttendanceRecord(student, course, attendanceDateTime, isLate ? AttendanceRecord.AttendanceStatus.LATE : AttendanceRecord.AttendanceStatus.PRESENT);
         model.addAttendanceRecord(courseId, record);
         refreshAllData();
         String message = String.format("Marked %s as %s for %s at %s", student.getName(), isLate ? "LATE" : "ON TIME", course.getName(), attendanceDateTime.format(DATE_TIME_FORMATTER));
@@ -261,7 +303,41 @@ public class AttendanceController {
     }
 
     private void viewAttendance() {
-        updateViewAttendanceArea();
+        User currentUser = model.getCurrentUser();
+        if (currentUser == null) return;
+        
+        if (currentUser.isStudent()) {
+            // Show only student's own attendance
+            showStudentAttendance(currentUser.getStudentId());
+        } else {
+            updateViewAttendanceArea();
+        }
+    }
+
+    private void showStudentAttendance(String studentId) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Your Attendance Records\n\n");
+        boolean hasRecords = false;
+        for (String courseId : model.getCoursesForStudent(studentId)) {
+            Course course = model.getCourses().get(courseId);
+            sb.append("Course: ").append(course.getName()).append("\n");
+            List<AttendanceRecord> records = model.getAttendanceRecords().get(courseId);
+            if (records != null) {
+                for (AttendanceRecord record : records) {
+                    if (record.getStudent().getId().equals(studentId)) {
+                        sb.append(String.format("  %s - %s\n", 
+                            record.getDateTime().format(DATE_TIME_FORMATTER), 
+                            record.isLate() ? "LATE" : "PRESENT"));
+                        hasRecords = true;
+                    }
+                }
+            }
+            sb.append("\n");
+        }
+        if (!hasRecords) {
+            sb.append("No attendance records found.");
+        }
+        view.viewAttendanceArea.setText(sb.toString());
     }
 
     private void showLateStudents() {
@@ -287,6 +363,7 @@ public class AttendanceController {
     }
 
     private void deleteStudent() {
+        if (!checkAdminPermission()) return;
         String studentId = (String) view.deleteStudentComboBox.getSelectedItem();
         if (studentId == null) {
             view.showMessage("Please select a student to delete.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -300,6 +377,7 @@ public class AttendanceController {
     }
 
     private void deleteCourse() {
+        if (!checkAdminPermission()) return;
         String courseId = (String) view.deleteCourseComboBox.getSelectedItem();
         if (courseId == null) {
             view.showMessage("Please select a course to delete.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -327,6 +405,7 @@ public class AttendanceController {
     }
 
     private void editStudent() {
+        if (!checkAdminPermission()) return;
         String studentId = (String) view.deleteStudentComboBox.getSelectedItem();
         String newName = view.editStudentNameField.getText().trim();
         String newEmail = view.editStudentEmailField.getText().trim();
@@ -354,6 +433,7 @@ public class AttendanceController {
     }
 
     private void editCourse() {
+        if (!checkAdminPermission()) return;
         String courseId = (String) view.deleteCourseComboBox.getSelectedItem();
         String newName = view.editCourseNameField.getText().trim();
         String newCode = view.editCourseCodeField.getText().trim();
@@ -528,5 +608,103 @@ public class AttendanceController {
         } catch (Exception ex) {
             view.showMessage("Failed to change theme: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void logout() {
+        model.setCurrentUser(null);
+        view.currentUserLabel.setText("Not logged in");
+        view.showMessage("Logged out successfully!", "Logout", JOptionPane.INFORMATION_MESSAGE);
+        // Disable all tabs
+        for (int i = 0; i < view.tabbedPane.getTabCount(); i++) {
+            view.tabbedPane.setEnabledAt(i, false);
+        }
+        
+        // Show login dialog for new user
+        User newUser = AttendanceView.showLoginDialog(model);
+        if (newUser != null) {
+            view.updateUIForUser(newUser);
+            refreshAllData();
+        } else {
+            // If no user logged in, exit the application
+            System.exit(0);
+        }
+    }
+
+    private boolean checkAdminPermission() {
+        if (model.getCurrentUser() == null || !model.getCurrentUser().isAdmin()) {
+            view.showMessage("Admin permission required!", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkTeacherPermission() {
+        if (model.getCurrentUser() == null || (!model.getCurrentUser().isTeacher() && !model.getCurrentUser().isAdmin())) {
+            view.showMessage("Teacher permission required!", "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return true;
+    }
+
+    private void updateRulesCombos() {
+        view.rulesCourseComboBox.removeAllItems();
+        for (String id : model.getCourses().keySet()) {
+            view.rulesCourseComboBox.addItem(id);
+        }
+        view.excusedCourseComboBox.removeAllItems();
+        for (String id : model.getCourses().keySet()) {
+            view.excusedCourseComboBox.addItem(id);
+        }
+        view.excusedStudentComboBox.removeAllItems();
+        for (String id : model.getStudents().keySet()) {
+            view.excusedStudentComboBox.addItem(id);
+        }
+    }
+
+    private void setCustomLateThreshold() {
+        if (!checkAdminPermission()) return;
+        String courseId = (String) view.rulesCourseComboBox.getSelectedItem();
+        String timeStr = view.lateThresholdField.getText().trim();
+        if (courseId == null || timeStr.isEmpty()) {
+            view.showMessage("Select a course and enter time (HH:MM).", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            LocalTime threshold = LocalTime.parse(timeStr);
+            Course course = model.getCourses().get(courseId);
+            course.setCustomLateThreshold(threshold);
+            model.rewriteCoursesFile();
+            view.showMessage("Late threshold set to " + threshold + " for " + course.getName(), "Success", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            view.showMessage("Invalid time format. Use HH:MM (e.g., 09:30).", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void markExcusedAbsence() {
+        if (!checkTeacherPermission()) return;
+        String studentId = (String) view.excusedStudentComboBox.getSelectedItem();
+        String courseId = (String) view.excusedCourseComboBox.getSelectedItem();
+        String dateStr = view.excusedDateField.getText().trim();
+        if (studentId == null || courseId == null || dateStr.isEmpty()) {
+            view.showMessage("Select student, course, and enter date.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            LocalDate date = LocalDate.parse(dateStr);
+            LocalTime time = LocalTime.of(9, 0); // Default time for absence
+            LocalDateTime absenceDateTime = LocalDateTime.of(date, time);
+            Student student = model.getStudents().get(studentId);
+            Course course = model.getCourses().get(courseId);
+            AttendanceRecord record = new AttendanceRecord(student, course, absenceDateTime, AttendanceRecord.AttendanceStatus.EXCUSED_ABSENCE);
+            model.addAttendanceRecord(courseId, record);
+            refreshAllData();
+            view.showMessage("Marked " + student.getName() + " as excused absence for " + course.getName() + " on " + dateStr, "Success", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            view.showMessage("Invalid date format. Use yyyy-MM-dd.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showAvailableUsers() {
+        view.showAvailableUsers(model);
     }
 } 

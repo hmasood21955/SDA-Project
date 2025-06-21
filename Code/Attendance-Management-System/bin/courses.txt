@@ -1,0 +1,5 @@
+C001,Introduction to Computer Science,CS101,09:00
+C002,Data Structures and Algorithms,CS201,08:30
+C003,Database Management Systems,CS301,09:15
+C004,Software Engineering,CS401,08:45
+C005,Web Development,CS501,10:00 

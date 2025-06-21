@@ -1,6 +1,7 @@
 package view;
 
 import model.AttendanceModel;
+import model.User;
 import javax.swing.*;
 import java.awt.*;
 
@@ -60,6 +61,17 @@ public class AttendanceView extends JFrame {
     public final JButton refreshStatisticsButton;
     // Theme toggle
     public final JToggleButton themeToggleButton;
+    public final JButton logoutButton;
+    public final JLabel currentUserLabel;
+    public final JButton showUsersButton;
+    // Attendance Rules Tab
+    public final JComboBox<String> rulesCourseComboBox;
+    public final JTextField lateThresholdField;
+    public final JButton setThresholdButton;
+    public final JComboBox<String> excusedStudentComboBox;
+    public final JComboBox<String> excusedCourseComboBox;
+    public final JTextField excusedDateField;
+    public final JButton markExcusedButton;
 
     public AttendanceView(AttendanceModel model) {
         setTitle("Attendance Management System");
@@ -230,19 +242,86 @@ public class AttendanceView extends JFrame {
         statsPanel.add(refreshStatisticsButton, BorderLayout.NORTH);
         statsPanel.add(new JScrollPane(statisticsArea), BorderLayout.CENTER);
         tabbedPane.addTab("Statistics", statsPanel);
+        // Attendance Rules Tab
+        JPanel rulesPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel thresholdPanel = new JPanel(new GridLayout(1, 4, 10, 10));
+        rulesCourseComboBox = new JComboBox<>();
+        lateThresholdField = new JTextField(8);
+        setThresholdButton = new JButton("Set Late Threshold (HH:MM)");
+        thresholdPanel.add(new JLabel("Course:"));
+        thresholdPanel.add(rulesCourseComboBox);
+        thresholdPanel.add(new JLabel("Late Threshold:"));
+        thresholdPanel.add(lateThresholdField);
+        thresholdPanel.add(setThresholdButton);
+        
+        JPanel excusedPanel = new JPanel(new GridLayout(1, 5, 10, 10));
+        excusedStudentComboBox = new JComboBox<>();
+        excusedCourseComboBox = new JComboBox<>();
+        excusedDateField = new JTextField(10);
+        markExcusedButton = new JButton("Mark Excused Absence");
+        excusedPanel.add(new JLabel("Student:"));
+        excusedPanel.add(excusedStudentComboBox);
+        excusedPanel.add(new JLabel("Course:"));
+        excusedPanel.add(excusedCourseComboBox);
+        excusedPanel.add(new JLabel("Date (yyyy-MM-dd):"));
+        excusedPanel.add(excusedDateField);
+        excusedPanel.add(markExcusedButton);
+        
+        JPanel rulesTopPanel = new JPanel(new BorderLayout());
+        rulesTopPanel.add(thresholdPanel, BorderLayout.NORTH);
+        rulesTopPanel.add(excusedPanel, BorderLayout.SOUTH);
+        rulesPanel.add(rulesTopPanel, BorderLayout.NORTH);
+        tabbedPane.addTab("Attendance Rules", rulesPanel);
         // Theme toggle
         themeToggleButton = new JToggleButton("Dark Mode");
         themeToggleButton.setFocusable(false);
         JPanel themePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         themePanel.add(themeToggleButton);
         add(themePanel, BorderLayout.NORTH);
+        // User info panel
+        JPanel userPanel = new JPanel(new BorderLayout());
+        currentUserLabel = new JLabel("Not logged in");
+        logoutButton = new JButton("Logout");
+        showUsersButton = new JButton("Show Available Users");
+        userPanel.add(currentUserLabel, BorderLayout.WEST);
+        userPanel.add(showUsersButton, BorderLayout.CENTER);
+        userPanel.add(logoutButton, BorderLayout.EAST);
+        add(userPanel, BorderLayout.SOUTH);
         add(tabbedPane, BorderLayout.CENTER);
         setLocationRelativeTo(null);
     }
     public void showMessage(String message, String title, int type) {
         JOptionPane.showMessageDialog(this, message, title, type);
     }
-    public static boolean showLoginDialog() {
+    
+    public void showAvailableUsers(AttendanceModel model) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Available Users:\n\n");
+        sb.append("Admin Users:\n");
+        sb.append("Username: admin, Password: admin123\n\n");
+        sb.append("Teacher Users:\n");
+        sb.append("Username: teacher, Password: teacher123\n\n");
+        sb.append("Student Users:\n");
+        
+        // Show student users that exist
+        boolean hasStudentUsers = false;
+        for (User user : model.getUsers().values()) {
+            if (user.isStudent()) {
+                sb.append("Username: ").append(user.getUsername()).append(", Password: student123\n");
+                hasStudentUsers = true;
+            }
+        }
+        
+        if (!hasStudentUsers) {
+            sb.append("No student users yet. Add students as admin to create student accounts.\n");
+        }
+        
+        sb.append("\nNote: Student accounts are automatically created when students are added.");
+        sb.append("\nStudent usernames are their student IDs in lowercase.");
+        
+        JOptionPane.showMessageDialog(this, sb.toString(), "Available Users", JOptionPane.INFORMATION_MESSAGE);
+    }
+    public static User showLoginDialog(AttendanceModel model) {
         JPanel panel = new JPanel(new GridLayout(2, 2, 10, 10));
         JTextField userField = new JTextField();
         JPasswordField passField = new JPasswordField();
@@ -254,8 +333,34 @@ public class AttendanceView extends JFrame {
         if (result == JOptionPane.OK_OPTION) {
             String user = userField.getText().trim();
             String pass = new String(passField.getPassword());
-            return user.equals("admin") && pass.equals("admin123");
+            return model.authenticateUser(user, pass);
         }
-        return false;
+        return null;
+    }
+    public void updateUIForUser(User user) {
+        currentUserLabel.setText("Logged in as: " + user.getUsername() + " (" + user.getRole() + ")");
+        
+        // Show/hide tabs based on role
+        if (user.isAdmin()) {
+            // Admin sees everything
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                tabbedPane.setEnabledAt(i, true);
+            }
+        } else if (user.isTeacher()) {
+            // Teacher sees: Assign Students, Mark Attendance, View Attendance, Late Students, Statistics
+            tabbedPane.setEnabledAt(0, false); // Students
+            tabbedPane.setEnabledAt(1, false); // Courses
+            tabbedPane.setEnabledAt(2, true);  // Assign Students
+            tabbedPane.setEnabledAt(3, true);  // Mark Attendance
+            tabbedPane.setEnabledAt(4, true);  // View Attendance
+            tabbedPane.setEnabledAt(5, true);  // Late Students
+            tabbedPane.setEnabledAt(6, true);  // Statistics
+        } else if (user.isStudent()) {
+            // Student sees only: View Attendance (filtered to their records)
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                tabbedPane.setEnabledAt(i, false);
+            }
+            tabbedPane.setEnabledAt(4, true); // View Attendance
+        }
     }
 } 
