@@ -13,16 +13,39 @@ public class AttendanceModel {
     private final Map<String, User> users = new HashMap<>();
     private User currentUser = null;
     public final LocalTime LATE_THRESHOLD = LocalTime.of(9, 0);
-    private static final String STUDENTS_FILE = "students.txt";
-    private static final String COURSES_FILE = "courses.txt";
-    private static final String ASSIGNMENTS_FILE = "assignments.txt";
-    private static final String USERS_FILE = "users.txt";
+    private static final String DATA_DIR = "data";
+    private static final String STUDENTS_FILE = DATA_DIR + "/students.txt";
+    private static final String COURSES_FILE = DATA_DIR + "/courses.txt";
+    private static final String ASSIGNMENTS_FILE = DATA_DIR + "/assignments.txt";
+    private static final String USERS_FILE = DATA_DIR + "/users.txt";
 
     public AttendanceModel() {
+        migrateOldDataFiles();
         loadUsersFromFile();
         loadStudentsFromFile();
         loadCoursesFromFile();
         loadAssignmentsFromFile();
+    }
+
+    private void migrateOldDataFiles() {
+        String[] files = {"students.txt", "courses.txt", "assignments.txt", "users.txt"};
+        String[] searchDirs = {"", "bin"};
+        File dataDir = new File(DATA_DIR);
+        if (!dataDir.exists()) dataDir.mkdirs();
+        for (String fname : files) {
+            File newFile = new File(DATA_DIR + "/" + fname);
+            if (newFile.exists()) continue; // Already migrated
+            for (String dir : searchDirs) {
+                File oldFile = dir.isEmpty() ? new File(fname) : new File(dir + "/" + fname);
+                if (oldFile.exists()) {
+                    try {
+                        java.nio.file.Files.move(oldFile.toPath(), newFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    } catch (Exception e) {
+                        // Ignore errors, just try to migrate if possible
+                    }
+                }
+            }
+        }
     }
 
     private void loadStudentsFromFile() {
@@ -324,5 +347,16 @@ public class AttendanceModel {
     public LocalTime getLateThresholdForCourse(String courseId) {
         Course course = courses.get(courseId);
         return course != null ? course.getCustomLateThreshold() : LATE_THRESHOLD;
+    }
+
+    public void deleteAssignment(String courseId, String studentId) {
+        Set<String> students = courseAssignments.get(courseId);
+        if (students != null) {
+            students.remove(studentId);
+            if (students.isEmpty()) {
+                courseAssignments.remove(courseId);
+            }
+            rewriteAssignmentsFile();
+        }
     }
 } 

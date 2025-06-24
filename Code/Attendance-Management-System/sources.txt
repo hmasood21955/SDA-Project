@@ -1,0 +1,8 @@
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\ConsolidatedAttendanceSystem.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\controller\AttendanceController.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\model\AttendanceModel.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\model\AttendanceRecord.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\model\Course.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\model\Student.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\model\User.java
+C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\view\AttendanceView.java

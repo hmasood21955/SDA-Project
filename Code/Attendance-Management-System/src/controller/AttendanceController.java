@@ -1,7 +1,4 @@
 package controller;
-
-import model.*;
-import view.AttendanceView;
 import java.awt.event.*;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -9,6 +6,10 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import javax.swing.*;
+import java.awt.event.*;
+import model.*;
+import view.AttendanceView;
+
 
 public class AttendanceController {
     private final AttendanceModel model;
@@ -28,6 +29,7 @@ public class AttendanceController {
         view.editCourseButton.addActionListener(e -> editCourse());
         // Assignments
         view.assignButton.addActionListener(e -> assignStudentToCourse());
+        view.deleteAssignmentButton.addActionListener(e -> deleteAssignment());
         // Mark Attendance
         view.markAttendanceButton.addActionListener(e -> markAttendance());
         // View Attendance
@@ -67,6 +69,7 @@ public class AttendanceController {
         updateViewAttendanceArea();
         updateDeleteCombos();
         updateRulesCombos();
+        updateDeleteAssignmentCombos();
     }
 
     private void updateStudentList() {
@@ -706,5 +709,40 @@ public class AttendanceController {
 
     private void showAvailableUsers() {
         view.showAvailableUsers(model);
+    }
+
+    private void updateDeleteAssignmentCombos() {
+        view.deleteAssignCourseComboBox.removeAllItems();
+        for (String courseId : model.getCourses().keySet()) {
+            view.deleteAssignCourseComboBox.addItem(courseId);
+        }
+        updateDeleteAssignStudentCombo();
+        view.deleteAssignCourseComboBox.addActionListener(e -> updateDeleteAssignStudentCombo());
+    }
+
+    private void updateDeleteAssignStudentCombo() {
+        view.deleteAssignStudentComboBox.removeAllItems();
+        String courseId = (String) view.deleteAssignCourseComboBox.getSelectedItem();
+        if (courseId == null) return;
+        Set<String> studentIds = model.getStudentsForCourse(courseId);
+        for (String sid : studentIds) {
+            view.deleteAssignStudentComboBox.addItem(sid);
+        }
+    }
+
+    private void deleteAssignment() {
+        if (!checkTeacherPermission()) return;
+        String courseId = (String) view.deleteAssignCourseComboBox.getSelectedItem();
+        String studentId = (String) view.deleteAssignStudentComboBox.getSelectedItem();
+        if (courseId == null || studentId == null) {
+            view.showMessage("Please select both course and student to delete assignment.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(view, "Are you sure you want to unassign student " + studentId + " from course " + courseId + "?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        model.deleteAssignment(courseId, studentId);
+        refreshAllData();
+        updateDeleteAssignmentCombos();
+        view.showMessage("Assignment deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 } 

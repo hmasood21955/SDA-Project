@@ -1,0 +1,3 @@
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+Note: C:\Users\HP\Documents\GitHub\SDA-Project\Code\Attendance-Management-System\src\controller\AttendanceController.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.

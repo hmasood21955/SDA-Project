@@ -1,7 +1,0 @@
-admin,admin,admin123,ADMIN
-teacher,teacher,teacher123,TEACHER
-user_s001,s001,student123,STUDENT,S001
-user_s002,s002,student123,STUDENT,S002
-user_s003,s003,student123,STUDENT,S003
-user_s004,s004,student123,STUDENT,S004
-user_s005,s005,student123,STUDENT,S005
