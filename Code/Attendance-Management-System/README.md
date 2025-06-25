@@ -36,6 +36,41 @@ A comprehensive Java Swing-based attendance management system with role-based ac
 - **Session Management**: Proper user session handling
 - **Access Control**: Role-appropriate interface elements
 
+## Technologies Used
+
+### Core Technologies
+- **Java** - Primary programming language
+- **Java Swing** - GUI framework for desktop application
+- **MVC Architecture** - For clean separation of concerns
+
+### Development Tools
+- **JDK 8+** - Java Development Kit
+- **IDE** - Compatible with any Java IDE (Eclipse, IntelliJ IDEA, VS Code)
+- **Git** - Version control system
+
+### File System
+- **Text-based Storage** - Persistent data storage using formatted text files
+- **Custom Serialization** - For data import/export functionality
+
+## Getting Started
+
+To get a local copy up and running, follow these simple steps.
+
+### Prerequisites
+
+- Java Development Kit (JDK) 8 or higher
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/SDA-Project.git
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd SDA-Project/Code/Attendance-Management-System
+   ```
+
 ## How to Use
 
 ### 1. **Compilation**
