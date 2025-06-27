@@ -70,6 +70,9 @@ To get a local copy up and running, follow these simple steps.
    ```bash
    cd SDA-Project/Code/Attendance-Management-System
    ```
+3. Create a `data` directory inside the project root (required for saving student, course, assignment, and user data):
+   - On Windows: Create a folder named `data` in the `Attendance-Management-System` directory.
+   - On Linux/macOS: Run `mkdir data` inside the `Attendance-Management-System` directory.
 
 ## How to Use
 

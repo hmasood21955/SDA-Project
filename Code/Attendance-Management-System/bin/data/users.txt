@@ -1,2 +1,3 @@
 admin,admin,admin123,ADMIN
 teacher,teacher,teacher123,TEACHER
+user_Sp23-bse-119,sp23-bse-119,student123,STUDENT,Sp23-bse-119
